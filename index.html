@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIRSUV Field Planner</title>
+<style>
+  :root {
+    --orange:#F07800;--charcoal:#1C1C1C;--dark:#141414;
+    --panel:#1E1E1E;--border:#2A2A2A;--text:#E2E8F0;
+    --muted:#666;--blue:#1A6FA8;--red:#E53935;--green:#4CAF50;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--dark);color:var(--text);font-family:'Courier New',monospace;font-size:11px;min-height:100vh;}
+  button{font-family:'Courier New',monospace;cursor:pointer;border:none;}
+  #header{background:var(--charcoal);border-bottom:2px solid #2A2A2A;padding:10px 20px;display:flex;align-items:center;gap:12px;}
+  #logo{color:var(--orange);font-weight:900;font-size:20px;letter-spacing:4px;}
+  #subtitle{color:#555;font-size:10px;letter-spacing:3px;}
+  #sector-nav{display:flex;border-bottom:3px solid var(--orange);transition:border-color 0.2s;}
+  .sec-btn{flex:1;padding:14px 6px;font-size:11px;font-weight:700;letter-spacing:1px;background:#1A1A1A;color:#555;border:none;border-right:1px solid #2A2A2A;text-align:center;transition:all 0.15s;}
+  .sec-btn:last-child{border-right:none;}
+  .sec-btn.active{color:#fff;}
+  #sector-bar{background:#181818;border-bottom:1px solid var(--border);padding:6px 20px;display:flex;align-items:center;gap:10px;}
+  #sector-dot{width:7px;height:7px;border-radius:50%;}
+  #sector-name{font-size:10px;font-weight:700;letter-spacing:2px;}
+  #sector-desc{color:#333;font-size:9px;}
+  #main{display:flex;min-height:calc(100vh - 110px);overflow:hidden;}
+  #controls{width:220px;min-width:220px;background:var(--panel);border-right:1px solid var(--border);padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;}
+  #content{flex:1;padding:12px 16px;overflow-y:auto;min-width:0;}
+  .lbl{font-size:9px;letter-spacing:2px;font-weight:800;margin-bottom:5px;}
+  .sld-row{margin-bottom:9px;}
+  .sld-hdr{display:flex;justify-content:space-between;margin-bottom:2px;}
+  .sld-key{color:#888;font-size:9px;letter-spacing:1px;}
+  .sld-val{font-size:13px;font-weight:700;}
+  input[type=range]{width:100%;height:4px;}
+  .btn-row{display:flex;gap:4px;margin-bottom:7px;}
+  .tog{flex:1;padding:8px 4px;font-size:9px;font-weight:700;letter-spacing:1px;background:#252525;color:#555;border-bottom:2px solid #333;}
+  .panel-box{background:#1A1A1A;border:1px solid var(--border);padding:11px;margin-bottom:7px;}
+  .kv{display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px;}
+  .kk{color:var(--muted);}
+  .flag{padding:7px 9px;font-size:9px;line-height:1.6;margin-top:5px;}
+  .flag b{display:block;margin-bottom:2px;}
+  .flag span{color:#555;}
+  .note{color:#444;font-size:8px;margin-bottom:5px;}
+  .view-tabs{display:flex;gap:4px;margin-bottom:10px;}
+  .vtab{padding:9px 14px;font-size:9px;font-weight:700;letter-spacing:1px;background:#222;color:#555;border-bottom:2px solid #333;}
+  .sch-wrap{background:#1A1A1A;border:1px solid var(--border);overflow-x:auto;max-height:460px;overflow-y:auto;}
+  table{width:100%;border-collapse:collapse;font-size:9px;}
+  thead tr{background:#222;position:sticky;top:0;}
+  th{padding:6px 7px;text-align:left;font-weight:700;white-space:nowrap;}
+  td{padding:4px 7px;white-space:nowrap;}
+  tr.odd{background:#1A1A1A;}tr.even{background:#1D1D1D;}
+  .crit{color:var(--red);font-weight:700;}.high{color:var(--orange);font-weight:700;}.med{color:#888;}
+  canvas{display:block;background:#141414;border:1px solid #2A2A2A;width:100%;height:auto;}
+  #footer{border-top:1px solid var(--border);padding:6px 20px;display:flex;justify-content:space-between;font-size:8px;color:#333;}
+  .sub-tabs{display:flex;gap:4px;margin-bottom:10px;}
+  .diagram-wrap{display:block;width:100%;}
+  .diagram-info{margin-top:10px;}
+</style>
+</head>
+<body>
+<div id="header">
+  <span id="logo">AIRSUV</span><span id="subtitle">FIELD PLANNER</span>
+</div>
+<div id="sector-nav">
+  <button class="sec-btn" data-sec="tower"    onclick="setSector('tower')">📡 CELL TOWER</button>
+  <button class="sec-btn" data-sec="building" onclick="setSector('building')">🏢 BUILDING</button>
+  <button class="sec-btn" data-sec="solar"    onclick="setSector('solar')">☀️ SOLAR FARM</button>
+  <button class="sec-btn" data-sec="infra"    onclick="setSector('infra')">🌉 INFRASTRUCTURE</button>
+</div>
+<div id="sector-bar">
+  <div id="sector-dot"></div>
+  <span id="sector-name"></span>
+  <span id="sector-desc">— ARC SYSTEM · DJI MATRICE 4T</span>
+</div>
+<div id="main">
+  <div id="controls"></div>
+  <div id="content"></div>
+</div>
+<div id="footer">
+  <span>AIRSUV · YORK, UK · mark@airsuv.uk · 07720 886879</span>
+  <span id="footer-accent">Built for precision. Delivered with confidence.</span>
+</div>
+
+<script>
+// ─── State & Config ────────────────────────────────────────────────────────
+const S={
+  sector:'tower',
+  tower:{h:40,cam:'rgb',rf:1,view:'diagram'},
+  building:{sub:'commercial',bH:12,bL:40,bW:25,standoff:10,alt:20,pattern:'horizontal',view:'facade'},
+  solar:{mode:'mw',mw:5,ha:10,iec:'standard',alt:27,bifacial:false,irr:650,wind:3,view:'site'},
+  infra:{sub:'bridge',spanL:30,deckH:6,deckT:1,piers:1,standoff:5,tm:true,water:false,steel:false,wH:4,wL:30,wS:4,view:'diagram'},
+};
+const SECTORS={tower:{label:'CELL TOWER',color:'#F07800'},building:{label:'BUILDING',color:'#F07800'},solar:{label:'SOLAR FARM',color:'#E8A000'},infra:{label:'INFRASTRUCTURE',color:'#1A6FA8'}};
+const IEC={standard:{label:'IEC Standard',sub:'O&M / Annual',gsd:'5cm/px',aMin:25,aMax:30,aDef:27,hrMW:1.0,mwBat:0.4},full:{label:'IEC Full',sub:'Warranty / Insurance',gsd:'3cm/px',aMin:15,aMax:20,aDef:18,hrMW:1.5,mwBat:0.3}};
+const BSEC={commercial:{label:'COMMERCIAL',c:'#F07800',facade:{sMin:8,sMax:15,sDef:10,ovF:0.70,ovS:0.60,cam:'tele'},roof:{aMin:15,aMax:25,aDef:20,ovF:0.75,ovS:0.70}},heritage:{label:'HERITAGE',c:'#1A6FA8',facade:{sMin:3,sMax:10,sDef:5,ovF:0.80,ovS:0.65,cam:'wide'},roof:{aMin:15,aMax:25,aDef:18,ovF:0.80,ovS:0.65}}};
+const CFOV={wide:{h:84,v:57},tele:{h:35,v:24},thermal:{h:61,v:49}};
+function fSz(fov,d){return 2*d*Math.tan(fov*Math.PI/180/2);}
+function pPos(total,vfov,d,ov){const step=fSz(vfov,d)*(1-ov);const a=[];let h=0;while(h<=total+step*0.5){a.push(+h.toFixed(1));h+=step;}return a;}
+
+// ─── Canvas helpers ────────────────────────────────────────────────────────
+function mkCanvas(id,aspect){
+  const cw=document.getElementById('content').clientWidth-32;
+  // Max height = viewport minus fixed chrome (header+nav+bar+footer ~115px) minus content padding
+  const maxH=Math.round(window.innerHeight-130);
+  const naturalH=Math.round(cw*aspect);
+  const h=Math.min(naturalH,maxH);
+  // If height-constrained, recalculate width to maintain aspect
+  const w=naturalH>maxH?Math.round(maxH/aspect):cw;
+  return `<canvas id="${id}" width="${w}" height="${h}" style="width:100%;max-width:${w}px;height:auto;display:block"></canvas>`;
+}
+function getContentW(){return document.getElementById('content').clientWidth-32;}
+function getCtx(id){const c=document.getElementById(id);return c?c.getContext('2d'):null;}
+function drawLine(ctx,x1,y1,x2,y2,col,lw,dash){ctx.save();ctx.strokeStyle=col;ctx.lineWidth=lw||1;if(dash)ctx.setLineDash(dash);else ctx.setLineDash([]);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.restore();}
+function drawRect(ctx,x,y,w,h,fill,stroke,lw){ctx.save();if(fill){ctx.fillStyle=fill;ctx.fillRect(x,y,w,h);}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||1;ctx.strokeRect(x,y,w,h);}ctx.restore();}
+function drawText(ctx,text,x,y,col,size,align,baseline){ctx.save();ctx.fillStyle=col||'#E2E8F0';ctx.font=`${size||9}px monospace`;ctx.textAlign=align||'left';ctx.textBaseline=baseline||'middle';ctx.fillText(text,x,y);ctx.restore();}
+function drawCircle(ctx,x,y,r,fill){ctx.save();ctx.fillStyle=fill;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.restore();}
+function hexAlpha(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return `rgba(${r},${g},${b},${a})`;}
+
+// ─── UI Helpers ────────────────────────────────────────────────────────────
+function setSector(sec){
+  S.sector=sec;
+  document.querySelectorAll('.sec-btn').forEach(b=>{const a=b.dataset.sec===sec;b.classList.toggle('active',a);b.style.background=a?SECTORS[sec].color:'#1A1A1A';});
+  document.getElementById('sector-nav').style.borderBottomColor=SECTORS[sec].color;
+  document.getElementById('sector-dot').style.background=SECTORS[sec].color;
+  document.getElementById('sector-name').style.color=SECTORS[sec].color;
+  document.getElementById('sector-name').textContent=SECTORS[sec].label;
+  document.getElementById('footer-accent').style.color=SECTORS[sec].color;
+  render();
+}
+function render(){const s=S.sector;if(s==='tower')rTower();if(s==='building')rBuilding();if(s==='solar')rSolar();if(s==='infra')rInfra();}
+function sld(lbl,key,ns,min,max,step,unit,c,dec){const v=S[ns][key];return `<div class="sld-row"><div class="sld-hdr"><span class="sld-key">${lbl}</span><span class="sld-val" style="color:${c}">${(+v).toFixed(dec||0)}${unit||'m'}</span></div><input type="range" min="${min}" max="${max}" step="${step}" value="${v}" style="accent-color:${c}" oninput="S['${ns}']['${key}']=+this.value;render()"></div>`;}
+function lbl(t,c){return `<div class="lbl" style="color:${c}">${t}</div>`;}
+function kv(k,v,hi,warn,c){const col=warn?'var(--red)':hi?(c||'var(--orange)'):'var(--text)';return `<div class="kv"><span class="kk">${k}</span><span style="color:${col};font-weight:${hi||warn?700:400}">${v}</span></div>`;}
+function flag(c,title,body){return `<div class="flag" style="background:${hexAlpha(c,0.1)};border:1px solid ${hexAlpha(c,0.4)};color:${c}"><b>${title}</b><span>${body}</span></div>`;}
+function tog(key,ns,opts,c){return `<div class="btn-row">${opts.map(([v,l,col])=>{const a=String(S[ns][key])===String(v);const bc=col||c;return `<button class="tog${a?' active':''}" style="${a?`background:${bc};color:#fff;border-bottom-color:${bc}`:''}" onclick="S['${ns}']['${key}']=${isNaN(v)||typeof v==='boolean'?`'${v}'`:v};render()">${l}</button>`;}).join('')}</div>`;}
+function vtabs(tabs,ns){const ac=SECTORS[S.sector].color;return `<div class="view-tabs">${tabs.map(([k,l])=>{const a=S[ns].view===k;return `<button class="vtab${a?' active':''}" style="${a?`background:${ac};color:#fff;border-bottom-color:${ac}`:''}" onclick="S['${ns}'].view='${k}';render()">${l}</button>`;}).join('')}</div>`;}
+function schTable(cols,rows,ac){
+  const head=cols.map(c=>`<th style="color:${ac}">${c}</th>`).join('');
+  const body=rows.map((r,i)=>`<tr class="${i%2===0?'odd':'even'}">${r.map((c,j)=>`<td style="${j===0?`color:${ac};font-weight:700`:j===r.length-1?'color:#555;font-size:8px':''}">${c}</td>`).join('')}</tr>`).join('');
+  return `<div class="sch-wrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TOWER
+// ═══════════════════════════════════════════════════════════════════════
+function rTower(){
+  const t=S.tower,ac='#F07800';
+  const rfP=[{label:'Safe',dist:20,c:'#4CAF50'},{label:'Caution',dist:15,c:'#F07800'},{label:'Min',dist:10,c:'#E53935'}];
+  const camDef={rgb:{vFOV:55,hFOV:73,c:'#F07800'},thermal:{vFOV:41,hFOV:55,c:'#1A6FA8'}};
+  const cam=camDef[t.cam],rf=rfP[t.rf];
+  const fH=fSz(cam.vFOV,rf.dist),spacing=fH*0.2;
+  const passes=pPos(t.h,cam.vFOV,rf.dist,0.8);
+  const zones=[{l:'Base',c:'#5A5A5A',f:0,t:0.08},{l:'Cabinet/BTS',c:'#1A6FA8',f:0.08,t:0.22},{l:'Antenna',c:'#F07800',f:0.65,t:0.88},{l:'Obs.Light',c:'#E53935',f:0.92,t:1.0}];
+
+  document.getElementById('controls').innerHTML=`
+    ${lbl('TOWER HEIGHT',ac)}${sld('HEIGHT','h','tower',10,120,1,'m',ac)}
+    ${lbl('CAMERA',ac)}${tog('cam','tower',[['rgb','RGB 48MP','#F07800'],['thermal','Thermal IR','#1A6FA8']],ac)}
+    ${lbl('RF DISTANCE',ac)}
+    <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px">
+      ${rfP.map((p,i)=>`<button style="padding:8px 10px;text-align:left;font-family:monospace;font-size:9px;background:${t.rf===i?'#222':'#1A1A1A'};border:1px solid ${t.rf===i?p.c:'#2A2A2A'};color:${t.rf===i?p.c:'#555'}" onclick="S.tower.rf=${i};render()"><b>${p.label} — ${p.dist}m</b><br><span style="color:#444;font-size:8px">${['Non-active','Active-reduced','Active-full RF'][i]}</span></button>`).join('')}
+    </div>
+    <div class="panel-box" style="border-color:${ac}">
+      ${lbl('SUMMARY',ac)}${kv('Passes',passes.length,true,false,ac)}${kv('Spacing',spacing.toFixed(2)+'m')}${kv('Frame H',fH.toFixed(1)+'m')}${kv('Rotations',passes.length,true,false,ac)}
+    </div>
+    <div>${zones.map(z=>`<div style="display:flex;align-items:center;gap:6px;font-size:9px;margin-bottom:3px"><div style="width:10px;height:10px;background:${z.c}"></div><span style="color:#777">${z.l}</span></div>`).join('')}</div>`;
+
+  let content=vtabs([['diagram','DIAGRAM'],['schedule','SCHEDULE']],'tower');
+  if(t.view==='diagram'){
+    content+=`<div class="diagram-wrap">${mkCanvas('tc',1.55)}</div>`;
+    document.getElementById('content').innerHTML=content;
+    const ctx=getCtx('tc');if(!ctx)return;
+    const cvs=document.getElementById('tc');
+    const SW=cvs.width,SH=cvs.height,TX=Math.round(SW*0.47),TW=Math.round(SW*0.07),DT=18,DB=SH-25,DH=DB-DT;
+    const yH=h=>DB-(h/t.h)*DH;
+    ctx.fillStyle='#141414';ctx.fillRect(0,0,SW,SH);
+    // grid
+    [0,10,20,30,40,50,60,70,80,90,100,110,120].filter(h=>h<=t.h).forEach(h=>{
+      drawLine(ctx,38,yH(h),SW-8,yH(h),'#1E1E1E',1);
+      drawText(ctx,h+'m',34,yH(h),'#444',8,'right','middle');
+    });
+    // zones
+    zones.forEach(z=>{const yt=yH(t.h*z.t),yb=yH(t.h*z.f);ctx.fillStyle=hexAlpha(z.c,0.1);ctx.fillRect(TX-Math.round(SW*0.18),yt,Math.round(SW*0.18),yb-yt);drawText(ctx,z.l.split('/')[0],TX-Math.round(SW*0.19),yH(t.h*((z.f+z.t)/2)),z.c,7,'right','middle');});
+    // tower body
+    ctx.fillStyle='#252525';ctx.strokeStyle='#404040';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(TX-TW/2-5,DB);ctx.lineTo(TX+TW/2+5,DB);ctx.lineTo(TX+TW/2,DT+18);ctx.lineTo(TX-TW/2,DT+18);ctx.closePath();ctx.fill();ctx.stroke();
+    drawRect(ctx,TX-5,DT,10,22,'#2E2E2E','#404040',1);
+    // antennas
+    [0.68,0.75,0.82].forEach(p=>{const y=yH(t.h*p);ctx.fillStyle=hexAlpha('#F07800',0.7);ctx.fillRect(TX+TW/2+2,y-4,12,8);ctx.fillRect(TX-TW/2-14,y-4,12,8);});
+    drawCircle(ctx,TX,yH(t.h*0.97),4,hexAlpha('#E53935',0.9));
+    // passes - line extends from tower right edge to right edge of canvas
+    passes.forEach((h,i)=>{const y=yH(h);drawLine(ctx,TX+TW/2+16,y,SW-10,y,cam.c,1,[3,2]);drawLine(ctx,TX+TW/2+16,y-2,TX+TW/2+16,y+2,cam.c,1.5);if(passes.length<=20||i%2===0)drawText(ctx,h.toFixed(1)+'m',SW-12,y,cam.c,8,'right','middle');});
+  } else {
+    content+=schTable(['PASS','HEIGHT','ZONE','ROTATION'],passes.map((h,i)=>{const z=zones.slice().reverse().find(z=>h>=t.h*z.f)||zones[0];return [`P${i+1}`,h.toFixed(1)+'m',z.l,'360°'];}),ac);
+    document.getElementById('content').innerHTML=content;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// BUILDING
+// ═══════════════════════════════════════════════════════════════════════
+function rBuilding(){
+  const b=S.building,cfg=BSEC[b.sub],sc=cfg.c;
+  const fc=CFOV[cfg.facade.cam];
+  const fH=fSz(fc.v,b.standoff),fW=fSz(fc.h,b.standoff);
+  const fPasses=pPos(b.bH,fc.v,b.standoff,cfg.facade.ovF);
+  const colStep=fW*(1-cfg.facade.ovS);const cPasses=[];let cx=0;while(cx<=b.bL+colStep*0.5){cPasses.push(+cx.toFixed(1));cx+=colStep;}
+  const rFH=fSz(CFOV.wide.v,b.alt),rFW=fSz(CFOV.wide.h,b.alt);
+  const roofLines=Math.ceil(b.bW/(rFW*(1-cfg.roof.ovS)))+1;
+  const roofImg=Math.ceil(b.bL/(rFH*(1-cfg.roof.ovF)))+1;
+  const totFac=(b.pattern==='horizontal'?fPasses.length:cPasses.length)*4;
+
+  document.getElementById('controls').innerHTML=`
+    <div class="sub-tabs">${Object.entries(BSEC).map(([k,v])=>`<button class="tog${b.sub===k?' active':''}" style="${b.sub===k?`background:${v.c};color:#fff;border-bottom-color:${v.c}`:''}" onclick="S.building.sub='${k}';S.building.standoff=${v.facade.sDef};S.building.alt=${v.roof.aDef};render()">${v.label}</button>`).join('')}</div>
+    ${lbl('GEOMETRY',sc)}${sld('HEIGHT','bH','building',4,60,1,'m',sc)}${sld('LENGTH','bL','building',10,200,1,'m',sc)}${sld('WIDTH','bW','building',10,150,1,'m',sc)}
+    ${lbl('FACADE',sc)}<div class="note">${cfg.facade.cam==='tele'?'ARC-2B · Med Tele · 70%/60%':'HEAG317 · 80%/65% · min 3m'}</div>
+    ${sld('STANDOFF','standoff','building',cfg.facade.sMin,cfg.facade.sMax,1,'m',sc)}
+    ${tog('pattern','building',[['horizontal','HORIZ'],['vertical','VERT']],sc)}
+    ${lbl('ROOF',sc)}${sld('ALT ABOVE ROOF','alt','building',cfg.roof.aMin,cfg.roof.aMax,1,'m',sc)}
+    ${b.sub==='heritage'?flag('#1A6FA8','HEAG317 ACTIVE','Min 3m standoff · 80% fwd · Method Statement may be required'):''}
+    <div class="panel-box" style="border-color:${sc}">${lbl('SUMMARY',sc)}${kv('Facade/face',b.pattern==='horizontal'?fPasses.length:cPasses.length)}${kv('×4 total',totFac,true,false,sc)}${kv('Roof lines',roofLines)}${kv('~Roof images',roofLines*roofImg,true,false,sc)}</div>`;
+
+  let content=vtabs([['facade','FACADE'],['roof','ROOF'],['schedule','SCHEDULE']],'building');
+  if(b.view==='facade'){
+    content+=mkCanvas('bc',1.35);
+    document.getElementById('content').innerHTML=content;
+    const ctx=getCtx('bc');if(!ctx)return;
+    const cvs=document.getElementById('bc');
+    const SW=cvs.width,SH=cvs.height,PL=42,PR=80,PT=16,PB=24,dW=SW-PL-PR,dH=SH-PT-PB;
+    const yH=h=>PT+dH-(h/b.bH)*dH;
+    ctx.fillStyle='#141414';ctx.fillRect(0,0,SW,SH);
+    for(let h=0;h<=b.bH;h+=5){drawLine(ctx,PL,yH(h),SW-PR+8,yH(h),'#1C1C1C',1);drawText(ctx,h+'m',PL-3,yH(h),'#444',7,'right','middle');}
+    drawRect(ctx,PL,PT,dW,dH,'#202020','#404040',1.5);
+    [0.1,0.38,0.66].forEach(p=>{drawRect(ctx,PL+dW*p,yH(b.bH*0.55),dW*0.2,dH*0.12,'#1A1A1A','#303030',1);});
+    if(b.pattern==='horizontal'){
+      fPasses.forEach((h,i)=>{const y=yH(h);drawLine(ctx,SW-PR+2,y,SW-PR+10,y,sc,1.5);drawLine(ctx,PL,y,SW-PR+2,y,sc,0.8,[3,2]);if(fPasses.length<=18||i%2===0)drawText(ctx,`P${i+1}·${h.toFixed(1)}m`,SW-PR+13,y,sc,7,'left','middle');});
+    } else {
+      cPasses.forEach((wx,i)=>{const xPx=PL+(wx/b.bL)*dW;drawLine(ctx,xPx,PT,xPx,PT+dH,sc,0.8,[3,2]);drawText(ctx,`C${i+1}`,xPx,PT-6,sc,7,'center','middle');});
+    }
+  } else if(b.view==='roof'){
+    content+=mkCanvas('brc',0.55);
+    document.getElementById('content').innerHTML=content;
+    const ctx=getCtx('brc');if(!ctx)return;
+    const cvs=document.getElementById('brc');
+    const RW=cvs.width,RH=cvs.height,RP=32,rdW=RW-RP*2,rdH=RH-RP*2;
+    ctx.fillStyle='#141414';ctx.fillRect(0,0,RW,RH);
+    drawRect(ctx,RP,RP,rdW,rdH,'#202020','#404040',1.5);
+    const stepS2=rFW*(1-cfg.roof.ovS);let s2=0;
+    while(s2<=b.bW+stepS2*0.5){const yPx=RP+Math.min(s2/b.bW,1)*rdH,hB=(rFW/b.bW)*rdH/2;ctx.fillStyle=hexAlpha(sc,0.08);ctx.fillRect(RP,yPx-hB,rdW,hB*2);drawLine(ctx,RP,yPx,RP+rdW,yPx,sc,0.7,[4,3]);s2+=stepS2;}
+    drawText(ctx,b.bL+'m',RP+rdW/2,RP-8,'#555',8,'center','middle');
+    ctx.save();ctx.translate(RP-10,RP+rdH/2);ctx.rotate(-Math.PI/2);drawText(ctx,b.bW+'m',0,0,'#555',8,'center','middle');ctx.restore();
+    drawText(ctx,`${roofLines} lines · ${roofImg} img/line`,RP+rdW/2,RP+rdH+14,sc,9,'center','middle');
+  } else {
+    content+=schTable(['PHASE','PASS','ALT','CAMERA','NOTE'],[
+      ['ARC-1','Overview orbit',`${b.bH+25}m`,'Wide RGB','−45° · 4K video'],
+      ...fPasses.flatMap((h,i)=>['N','S','E','W'].map(f=>['ARC-2B',`P${i+1}·${f}`,`${h.toFixed(1)}m`,cfg.facade.cam==='tele'?'Med Tele':'Wide RGB',`${b.standoff}m standoff`])),
+      ['ARC-2A','Roof grid',`${b.bH+b.alt}m`,'Wide RGB',`Nadir −90° · ${(cfg.roof.ovF*100).toFixed(0)}% fwd`],
+    ],sc);
+    document.getElementById('content').innerHTML=content;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SOLAR
+// ═══════════════════════════════════════════════════════════════════════
+function rSolar(){
+  const sol=S.solar,lv=IEC[sol.iec],sc=sol.iec==='full'?'#E53935':'#E8A000';
+  const mwCap=sol.mode==='mw'?sol.mw:sol.ha/2,areHa=sol.mode==='ha'?sol.ha:sol.mw*2;
+  const side=Math.sqrt(areHa*10000);
+  const fH2=fSz(CFOV.thermal.v,sol.alt),fW2=fSz(CFOV.thermal.h,sol.alt);
+  const stepS=fW2*0.3;
+  const gLines=Math.ceil(side/stepS)+1,imgPL=Math.ceil(side/(fH2*0.2))+1;
+  const ftH=mwCap*lv.hrMW,days=Math.ceil(ftH/3.5),bats=Math.ceil(mwCap/lv.mwBat)+1;
+  const sectors=Math.ceil(mwCap/lv.mwBat);
+  const irrOk=sol.irr>=600,windOk=sol.wind<=5;
+
+  document.getElementById('controls').innerHTML=`
+    ${tog('mode','solar',[['mw','MW'],['ha','HA']],sc)}
+    ${sol.mode==='mw'?sld('MW CAPACITY','mw','solar',0.5,50,0.1,' MW',sc,1):sld('AREA (HA)','ha','solar',1,100,0.5,' ha',sc,1)}
+    <div style="color:#444;font-size:8px;margin-bottom:8px">≈${areHa.toFixed(1)} ha · ≈${mwCap.toFixed(1)} MW</div>
+    ${lbl('IEC LEVEL',sc)}
+    ${Object.entries(IEC).map(([k,v])=>`<button style="width:100%;padding:7px 10px;cursor:pointer;text-align:left;font-family:monospace;font-size:9px;margin-bottom:4px;background:${sol.iec===k?'#222':'#1A1A1A'};border:1px solid ${sol.iec===k?sc:'#2A2A2A'};color:${sol.iec===k?sc:'#555'}" onclick="S.solar.iec='${k}';S.solar.alt=${v.aDef};render()"><b>${v.label}</b> — ${v.gsd}<br><span style="color:#444;font-size:8px">${v.sub}</span></button>`).join('')}
+    ${sld('ALTITUDE','alt','solar',lv.aMin,lv.aMax,1,'m',sc)}
+    ${lbl(irrOk&&windOk?'IEC CONDITIONS ✔':'IEC CONDITIONS ✘',irrOk&&windOk?'#4CAF50':'#E53935')}
+    ${sld('IRRADIANCE','irr','solar',400,1000,10,' W/m²',irrOk?'#4CAF50':'#E53935',0)}
+    ${sld('WIND','wind','solar',0,10,0.5,' m/s',windOk?'#4CAF50':'#E53935',1)}
+    ${!irrOk?flag('#E53935','600 W/m² NOT MET','Non-negotiable. Pause. Do not reduce. Reschedule.'):''}
+    ${tog('bifacial','solar',[['false','MONOFACIAL'],['true','BIFACIAL','#1A6FA8']],sc)}
+    ${sol.bifacial?flag('#1A6FA8','BIFACIAL — FRONT FACE ONLY','Rear-face not detectable. Note methodology. Albedo effect on delta T.'):''}
+    <div class="panel-box" style="border-color:${sc}">${lbl('SUMMARY',sc)}${kv('Site',`${mwCap.toFixed(1)}MW · ${areHa.toFixed(1)}ha`)}${kv('Grid lines',gLines,true,false,sc)}${kv('Est. images','~'+(gLines*imgPL))}${kv('Flight time','~'+ftH.toFixed(1)+' hrs')}${kv('Batteries',bats,true,false,sc)}${kv('Sectors',sectors)}${days>1?kv('Deployment',days+' days — ACCOM',false,true):''}</div>`;
+
+  let content=vtabs([['site','SITE GRID'],['schedule','SCHEDULE']],'solar');
+  if(sol.view==='site'){
+    content+=mkCanvas('sc',0.75);
+    document.getElementById('content').innerHTML=content;
+    const ctx=getCtx('sc');if(!ctx)return;
+    const cvs=document.getElementById('sc');
+    const SW=cvs.width,SH=cvs.height,RP=32,rdW=SW-RP*2,rdH=SH-RP*2;
+    ctx.fillStyle='#141414';ctx.fillRect(0,0,SW,SH);
+    drawRect(ctx,RP,RP,rdW,rdH,'#181818','#404040',1.5);
+    for(let i=0;i<10;i++){ctx.fillStyle='#222';ctx.fillRect(RP+rdW*0.04,RP+rdH*(0.07+i*0.085),rdW*0.92,rdH*0.04);}
+    let s3=0;let si=0;
+    while(s3<=side+stepS*0.5){const xPx=RP+Math.min(s3/side,1)*rdW,hB=(fW2/side)*rdW/2;ctx.fillStyle=hexAlpha(sc,si%2===0?0.08:0.03);ctx.fillRect(xPx-hB,RP,hB*2,rdH);drawLine(ctx,xPx,RP,xPx,RP+rdH,sc,0.7,[3,3]);s3+=stepS;si++;}
+    for(let i=1;i<sectors;i++){const xPx=RP+(i/sectors)*rdW;drawLine(ctx,xPx,RP,xPx,RP+rdH,'#F07800',1.5,[5,3]);drawText(ctx,'S'+i,xPx+3,RP+10,'#F07800',8,'left','top');}
+    drawText(ctx,'▣ INV',RP+rdW*0.15,RP+rdH*0.87,'#3A7A3A',8,'left','middle');
+    drawText(ctx,'▣ INV',RP+rdW*0.65,RP+rdH*0.87,'#3A7A3A',8,'left','middle');
+    ctx.save();ctx.globalAlpha=0.12;drawText(ctx,mwCap.toFixed(1)+'MW',RP+rdW/2,RP+rdH/2,sc,22,'center','middle');ctx.restore();
+    drawText(ctx,`${gLines} lines · ${sol.alt}m AGL · 80%/70%`,RP+rdW/2,RP+rdH+14,sc,9,'center','top');
+  } else {
+    content+=schTable(['PHASE','ACTION','CAMERA','ALT','NOTE'],[
+      ['ARC-5 PRE','Conditions · irradiance · tracker lock','Ground','—','Confirm ≥600 W/m² before launch'],
+      ['ARC-1','Site overview · row alignment','Wide RGB','60–80m','Nadir+orbit · 4K video'],
+      ...Array.from({length:sectors},(_,i)=>[`ARC-2 S${String(i+1).padStart(2,'0')}`,`Thermal+RGB · lawnmower`,'Thermal R-JPEG + Wide RGB',`${sol.alt}m`,`Review before S${i+2} · log conditions`]),
+      ['ARC-4','Anomaly close-up · paired','Thermal + Med Tele','10–20m','5s dwell · spot meter · GPS tag'],
+      ['ARC-5 POST','Backup · site secured','Ground','—','R-JPEG confirmed · flight log exported'],
+    ],sc);
+    document.getElementById('content').innerHTML=content;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// INFRA
+// ═══════════════════════════════════════════════════════════════════════
+function rInfra(){
+  const inf=S.infra,sc=inf.sub==='bridge'?'#F07800':'#1A6FA8';
+  const sCols=(()=>{const fw=fSz(CFOV.tele.h,inf.standoff),st=fw*0.3;return st>0?Math.ceil(inf.spanL/st)+1:0;})();
+  const bPass=[{n:'Deck Pass',f:'Deck',cam:'Med Tele+Thermal',g:'−45° to −90°',alt:`${inf.deckH+inf.deckT+inf.standoff}m`,note:'Cracking, joints, drainage'},{n:'Soffit Pass',f:'Soffit',cam:'Med Tele+Thermal',g:'+25° to +35°',alt:`${inf.deckH-inf.standoff}m`,note:`${sCols} cols · spalling, rebar`},...Array.from({length:inf.piers},(_,i)=>({n:`Pier ${i+1}`,f:'Pier',cam:'Med Tele+Thermal',g:'0° to −20°',alt:'All faces',note:'Cracking, scour'})),{n:'Abutment N',f:'Abutment',cam:'Med Tele+Thermal',g:'−15° to 0°',alt:`${inf.standoff}m`,note:'Bearings, wingwalls'},{n:'Abutment S',f:'Abutment',cam:'Med Tele+Thermal',g:'−15° to 0°',alt:`${inf.standoff}m`,note:'Bearings, wingwalls'},{n:'Joints',f:'Joint',cam:'Telephoto',g:'0°',alt:'Hover',note:'Seal, debris'},{n:'Bearings',f:'Bearing',cam:'Telephoto+Thermal',g:'0°',alt:'Hover',note:'Settlement, corrosion'}];
+  const wPass=[{n:'Top Pass',h:(inf.wH*0.9).toFixed(1),g:'−45°',note:'Top, coping, drainage'},{n:'Mid Pass',h:(inf.wH*0.5).toFixed(1),g:'0°–10°',note:'Face, cracking, weepholes'},{n:'Base Pass',h:(inf.wH*0.05).toFixed(1),g:'0°',note:'Toe, weepholes, settlement'}];
+
+  document.getElementById('controls').innerHTML=`
+    <div class="sub-tabs">
+      <button class="tog${inf.sub==='bridge'?' active':''}" style="${inf.sub==='bridge'?'background:#F07800;color:#fff;border-bottom-color:#F07800':''}" onclick="S.infra.sub='bridge';render()">BRIDGE</button>
+      <button class="tog${inf.sub==='wall'?' active':''}" style="${inf.sub==='wall'?'background:#1A6FA8;color:#fff;border-bottom-color:#1A6FA8':''}" onclick="S.infra.sub='wall';render()">WALL</button>
+    </div>
+    ${inf.sub==='bridge'?`
+      ${lbl('BRIDGE GEOMETRY',sc)}${sld('SPAN','spanL','infra',5,200,1,'m',sc)}${sld('DECK HEIGHT','deckH','infra',2,50,1,'m',sc)}${sld('DECK THICKNESS','deckT','infra',0.5,3,0.1,'m',sc,1)}${sld('PIERS','piers','infra',0,8,1,'',sc)}${sld('STANDOFF','standoff','infra',3,8,1,'m',sc)}
+      ${lbl('SITE FLAGS',sc)}
+      ${[['TM Plan','tm','#E53935'],['Water','water','#1A6FA8'],['Steel/VPS','steel','#F07800']].map(([l,k,col])=>`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="color:#888;font-size:9px">${l}</span><button style="padding:5px 12px;font-family:monospace;font-size:9px;font-weight:700;background:${inf[k]?col:'#252525'};color:${inf[k]?'#fff':'#555'};border-bottom:2px solid ${inf[k]?col:'#333'}" onclick="S.infra.${k}=!S.infra.${k};render()">${inf[k]?'YES':'NO'}</button></div>`).join('')}
+      ${inf.tm?flag('#E53935','TM REQUIRED','Confirm active before flight near live carriageway.'):''}${inf.water?flag('#1A6FA8','WATER CROSSING','No flight over deep water.'):''}${inf.steel?flag('#F07800','STEEL — VPS','GPS unreliable. VPS primary.'):''}
+      <div class="panel-box" style="border-color:${sc}">${lbl('SUMMARY',sc)}${kv('Span',inf.spanL+'m')}${kv('Deck',inf.deckH+'m')}${kv('Piers',inf.piers)}${kv('Soffit cols',sCols)}${kv('Total passes',bPass.length,true,false,sc)}${kv('Batteries',Math.max(2,Math.ceil((bPass.length+2)/4))+'+',true,false,sc)}${kv('Scour check','Pier base',false,true)}</div>
+    `:`
+      ${lbl('WALL GEOMETRY',sc)}${sld('HEIGHT','wH','infra',1,20,1,'m',sc)}${sld('LENGTH','wL','infra',5,200,1,'m',sc)}${sld('STANDOFF','wS','infra',3,6,1,'m',sc)}
+      ${flag(sc,'THERMAL TIMING','During/after rainfall — maximum moisture contrast.')}${flag('#444','WEEPHOLES','All outlets individually. Blocked = hydrostatic risk.')}
+      <div class="panel-box" style="border-color:${sc}">${lbl('SUMMARY',sc)}${kv('Wall',`${inf.wH}m H × ${inf.wL}m L`)}${kv('Passes','3 (Top/Mid/Base)',true,false,sc)}${kv('Standoff',inf.wS+'m')}${kv('Watch for','Lean/rotation',false,true)}</div>
+    `}`;
+
+  let content=vtabs([['diagram','DIAGRAM'],['schedule','SCHEDULE'],['defects','DEFECTS']],'infra');
+  if(inf.view==='diagram'){
+    if(inf.sub==='bridge'){
+      content+=mkCanvas('ic',0.6);
+      document.getElementById('content').innerHTML=content;
+      const ctx=getCtx('ic');if(!ctx)return;
+      const cvs=document.getElementById('ic');
+      const SW=cvs.width,SH=cvs.height,PL=44,PR=22,PT=28,PB=50,dW=SW-PL-PR,dH=SH-PT-PB;
+      const totH=inf.deckH+inf.deckT+8;
+      const yH=h=>PT+dH-(h/totH)*dH,xF=x=>PL+(x/inf.spanL)*dW;
+      ctx.fillStyle='#141414';ctx.fillRect(0,0,SW,SH);
+      [0,5,10,15,20].filter(h=>h<=totH+1).forEach(h=>{drawLine(ctx,PL-2,yH(h),SW-PR,yH(h),'#1C1C1C',1);drawText(ctx,h+'m',PL-4,yH(h),'#444',7,'right','middle');});
+      ctx.fillStyle=hexAlpha('#0A1520',0.6);ctx.fillRect(PL,yH(0),dW,PB-8);
+      drawText(ctx,'WATERWAY',PL+dW/2,yH(0)+14,hexAlpha('#1A5A8A',1),7,'center','top');
+      const pierXs=inf.piers<=0?[]:Array.from({length:inf.piers},(_,i)=>inf.spanL*(i+1)/(inf.piers+1));
+      pierXs.forEach(px=>{drawRect(ctx,xF(px)-8,yH(inf.deckH),16,yH(0)-yH(inf.deckH),'#2E2E2E','#404040',1);});
+      drawRect(ctx,PL,yH(inf.deckH),14,yH(0)-yH(inf.deckH),'#2E2E2E','#404040',1);
+      drawRect(ctx,xF(inf.spanL)-14,yH(inf.deckH),14,yH(0)-yH(inf.deckH),'#2E2E2E','#404040',1);
+      drawRect(ctx,PL,yH(inf.deckH+inf.deckT),dW,yH(inf.deckH)-yH(inf.deckH+inf.deckT),'#282828','#505050',1.5);
+      drawText(ctx,'DECK',PL+dW/2,yH(inf.deckH+inf.deckT)+(yH(inf.deckH)-yH(inf.deckH+inf.deckT))/2,'#555',7,'center','middle');
+      const dY=inf.deckH+inf.deckT+inf.standoff,sY=inf.deckH-inf.standoff;
+      drawLine(ctx,PL,yH(dY),xF(inf.spanL),yH(dY),'#F07800',1.5,[4,2]);
+      drawText(ctx,'DECK',xF(inf.spanL)+3,yH(dY),'#F07800',7,'left','middle');
+      drawLine(ctx,PL,yH(sY),xF(inf.spanL),yH(sY),'#1A6FA8',1.5,[4,2]);
+      drawText(ctx,'SOFFIT',xF(inf.spanL)+3,yH(sY),'#1A6FA8',7,'left','middle');
+      drawText(ctx,'SPAN: '+inf.spanL+'m',PL+dW/2,SH-8,'#555',8,'center','middle');
+    } else {
+      content+=mkCanvas('ic',0.7);
+      document.getElementById('content').innerHTML=content;
+      const ctx=getCtx('ic');if(!ctx)return;
+      const cvs=document.getElementById('ic');
+      const SW=cvs.width,SH=cvs.height,PL=42,PR=20,PT=20,PB=28,dW=SW-PL-PR,dH=SH-PT-PB;
+      const yW=h=>PT+dH-(h/inf.wH)*dH;
+      ctx.fillStyle='#141414';ctx.fillRect(0,0,SW,SH);
+      for(let h=0;h<=inf.wH;h+=2){drawLine(ctx,PL,yW(h),SW-PR,yW(h),'#1C1C1C',1);drawText(ctx,h+'m',PL-4,yW(h),'#444',7,'right','middle');}
+      ctx.fillStyle=hexAlpha('#1A1A00',0.35);ctx.fillRect(PL-18,PT,18,dH);
+      drawRect(ctx,PL,PT,dW*0.15,dH,'#282828','#505050',1.5);
+      [0.15,0.3,0.45,0.6,0.75,0.9].forEach(p=>drawCircle(ctx,PL+dW*0.15,yW(inf.wH*(1-p)),3,hexAlpha('#1A6FA8',0.7)));
+      [{n:'TOP',h:inf.wH*0.9,g:'−45°'},{n:'MID',h:inf.wH*0.5,g:'0°–10°'},{n:'BASE',h:inf.wH*0.05,g:'0°'}].forEach(p=>{
+        const y=yW(p.h),xEnd=PL+dW*0.15+Math.min(inf.wS*dW*0.04, dW*0.5);
+        drawLine(ctx,PL+dW*0.15,y,xEnd,y,sc,1.2,[4,2]);
+        drawText(ctx,`${p.n}·${p.h.toFixed(1)}m`,xEnd+6,y-3,sc,9,'left','bottom');
+        drawText(ctx,p.g,xEnd+6,y+5,'#444',8,'left','top');
+      });
+    }
+  } else if(inf.view==='schedule'){
+    const passes=inf.sub==='bridge'?bPass:wPass;
+    content+=schTable(['PHASE','PASS','FACE','CAMERA','ALT','GIMBAL','TARGETS'],[
+      ['ARC-1','Overview','Full','Wide RGB',inf.sub==='bridge'?`${inf.deckH+inf.deckT+20}m`:`${inf.wH+10}m`,'−45°','Full asset · 4K video'],
+      ...passes.map((p,i)=>[`ARC-${i<2?'2':'3'}`,p.n,p.f||'',p.cam,p.alt||'',p.g||'',p.note]),
+      ['ARC-4','Defects','All','Telephoto+Thermal','3–10m','Per defect','5s dwell · paired · GPS'],
+    ],sc);
+    document.getElementById('content').innerHTML=content;
+  } else {
+    const defRows=inf.sub==='bridge'?[
+      ['Scour at pier base','<span class="crit">CRITICAL</span>','Immediate notification — same day'],
+      ['Spalling / exposed rebar','<span class="crit">CRITICAL</span>','Falling concrete — notify immediately'],
+      ['Delamination','<span class="high">HIGH</span>','Post solar-loading thermal · paired RGB'],
+      ['Moisture ingress','<span class="high">HIGH</span>','Thermal plume · document extent'],
+      ['Bearing deterioration','<span class="high">HIGH</span>','Structural concern · GPS tag'],
+      ['Expansion joint failure','<span class="med">MEDIUM</span>','Water ingress risk'],
+      ['Cracking','<span class="high">HIGH</span>','Width+pattern · scale reference'],
+    ]:[
+      ['Settlement / lean','<span class="crit">CRITICAL</span>','Immediate notification'],
+      ['Face cracking','<span class="high">HIGH</span>','Horizontal = overloading — engineer req.'],
+      ['Blocked weepholes','<span class="high">HIGH</span>','Hydrostatic risk — all outlets individually'],
+      ['Moisture saturation','<span class="med">MEDIUM</span>','Thermal · drainage failure'],
+      ['Root damage','<span class="med">MEDIUM</span>','Full coverage documented'],
+    ];
+    content+=`<div class="sch-wrap"><table><thead><tr>${['DEFECT','CLASS','ACTION'].map(h=>`<th style="color:${sc}">${h}</th>`).join('')}</tr></thead><tbody>${defRows.map((r,i)=>`<tr class="${i%2===0?'odd':'even'}"><td style="font-weight:700">${r[0]}</td><td>${r[1]}</td><td style="color:#555;font-size:8px">${r[2]}</td></tr>`).join('')}</tbody></table></div>`;
+    content+=`<div class="flag" style="background:${hexAlpha('#E53935',0.08)};border:1px solid ${hexAlpha('#E53935',0.4)};color:#E53935;margin-top:10px"><b>THERMAL DELAMINATION</b><span>Min 2–3°C delta T. Optimal: 2+ hrs direct sun or 1–2 hrs post-sunset. Abort if rain or rapid temp change.</span></div>`;
+    document.getElementById('content').innerHTML=content;
+  }
+}
+
+// ─── Init ──────────────────────────────────────────────────────────────────
+setSector('tower');
+</script>
+</body>
+</html>
