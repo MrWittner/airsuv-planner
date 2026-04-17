@@ -1,0 +1,415 @@
+<style>
+#afp-wrap{background:#141414;color:#E2E8F0;font-family:'Courier New',monospace;font-size:11px;width:100%;min-height:100vh;}
+#afp-wrap *{box-sizing:border-box;margin:0;padding:0;}
+#afp-wrap button{font-family:'Courier New',monospace;cursor:pointer;border:none;}
+#afp-header{background:#1C1C1C;border-bottom:2px solid #2A2A2A;padding:10px 16px;display:flex;align-items:center;gap:12px;}
+#afp-logo{color:#F07800;font-weight:900;font-size:18px;letter-spacing:4px;}
+#afp-subtitle{color:#555;font-size:9px;letter-spacing:3px;}
+#afp-nav{display:flex;border-bottom:3px solid #F07800;transition:border-color 0.2s;}
+.afp-sec{flex:1;padding:13px 6px;font-size:10px;font-weight:700;letter-spacing:1px;background:#1A1A1A;color:#555;border:none;border-right:1px solid #2A2A2A;text-align:center;cursor:pointer;transition:all 0.15s;}
+.afp-sec:last-child{border-right:none;}
+.afp-sec.afp-active{color:#fff;}
+#afp-bar{background:#181818;border-bottom:1px solid #2A2A2A;padding:6px 16px;display:flex;align-items:center;gap:8px;}
+#afp-dot{width:6px;height:6px;border-radius:50%;display:inline-block;}
+#afp-sname{font-size:9px;font-weight:700;letter-spacing:2px;}
+#afp-sdesc{color:#333;font-size:8px;}
+#afp-main{display:flex;min-height:80vh;overflow:hidden;}
+#afp-ctrl{width:210px;min-width:210px;background:#1E1E1E;border-right:1px solid #2A2A2A;padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:9px;}
+#afp-content{flex:1;padding:12px 14px;overflow-y:auto;min-width:0;}
+#afp-footer{border-top:1px solid #2A2A2A;padding:6px 16px;display:flex;justify-content:space-between;font-size:8px;color:#333;}
+.afp-lbl{font-size:9px;letter-spacing:2px;font-weight:800;margin-bottom:4px;}
+.afp-sld{margin-bottom:9px;}
+.afp-sld-hdr{display:flex;justify-content:space-between;margin-bottom:2px;}
+.afp-sld-k{color:#888;font-size:9px;letter-spacing:1px;}
+.afp-sld-v{font-size:12px;font-weight:700;}
+#afp-wrap input[type=range]{width:100%;height:4px;}
+.afp-brow{display:flex;gap:4px;margin-bottom:7px;}
+.afp-tog{flex:1;padding:8px 4px;font-size:9px;font-weight:700;letter-spacing:1px;background:#252525;color:#555;border-bottom:2px solid #333;cursor:pointer;}
+.afp-panel{background:#1A1A1A;border:1px solid #2A2A2A;padding:10px;margin-bottom:7px;}
+.afp-kv{display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px;}
+.afp-kk{color:#666;}
+.afp-flag{padding:7px 9px;font-size:9px;line-height:1.6;margin-top:5px;}
+.afp-flag b{display:block;margin-bottom:2px;}
+.afp-flag span{color:#555;}
+.afp-note{color:#444;font-size:8px;margin-bottom:5px;}
+.afp-vtabs{display:flex;gap:4px;margin-bottom:10px;}
+.afp-vtab{padding:8px 12px;font-size:9px;font-weight:700;letter-spacing:1px;background:#222;color:#555;border-bottom:2px solid #333;cursor:pointer;}
+.afp-sch{background:#1A1A1A;border:1px solid #2A2A2A;overflow-x:auto;max-height:440px;overflow-y:auto;}
+#afp-wrap table{width:100%;border-collapse:collapse;font-size:9px;}
+#afp-wrap thead tr{background:#222;position:sticky;top:0;}
+#afp-wrap th{padding:6px 7px;text-align:left;font-weight:700;white-space:nowrap;}
+#afp-wrap td{padding:4px 7px;white-space:nowrap;}
+#afp-wrap tr.afp-odd{background:#1A1A1A;}
+#afp-wrap tr.afp-even{background:#1D1D1D;}
+#afp-wrap canvas{display:block;background:#141414;border:1px solid #2A2A2A;}
+.afp-crit{color:#E53935;font-weight:700;}
+.afp-high{color:#F07800;font-weight:700;}
+.afp-med{color:#888;}
+.afp-sub{display:flex;gap:4px;margin-bottom:10px;}
+</style>
+
+<div id="afp-wrap">
+  <div id="afp-header">
+    <span id="afp-logo">AIRSUV</span>
+    <span id="afp-subtitle">FIELD PLANNER</span>
+  </div>
+  <div id="afp-nav">
+    <button class="afp-sec" data-sec="tower"    onclick="afpSec('tower')">📡 CELL TOWER</button>
+    <button class="afp-sec" data-sec="building" onclick="afpSec('building')">🏢 BUILDING</button>
+    <button class="afp-sec" data-sec="solar"    onclick="afpSec('solar')">☀️ SOLAR</button>
+    <button class="afp-sec" data-sec="infra"    onclick="afpSec('infra')">🌉 INFRASTRUCTURE</button>
+  </div>
+  <div id="afp-bar">
+    <span id="afp-dot"></span>
+    <span id="afp-sname"></span>
+    <span id="afp-sdesc">— ARC SYSTEM · DJI MATRICE 4T</span>
+  </div>
+  <div id="afp-main">
+    <div id="afp-ctrl"></div>
+    <div id="afp-content"></div>
+  </div>
+  <div id="afp-footer">
+    <span>AIRSUV · YORK, UK · mark@airsuv.uk</span>
+    <span id="afp-facc">Built for precision. Delivered with confidence.</span>
+  </div>
+</div>
+
+<script>
+(function(){
+// ─── State ─────────────────────────────────────────────────────────────────
+var S={
+  sec:'tower',
+  tower:{h:40,cam:'rgb',rf:1,view:'diagram'},
+  building:{sub:'commercial',bH:12,bL:40,bW:25,so:10,alt:20,pat:'horizontal',view:'facade'},
+  solar:{mode:'mw',mw:5,ha:10,iec:'standard',alt:27,bif:false,irr:650,wind:3,view:'site'},
+  infra:{sub:'bridge',spanL:30,deckH:6,deckT:1,piers:1,so:5,tm:true,water:false,steel:false,wH:4,wL:30,wS:4,view:'diagram'},
+};
+var SECS={tower:{label:'CELL TOWER',c:'#F07800'},building:{label:'BUILDING',c:'#F07800'},solar:{label:'SOLAR FARM',c:'#E8A000'},infra:{label:'INFRASTRUCTURE',c:'#1A6FA8'}};
+var IEC={standard:{label:'IEC Standard',sub:'O&M / Annual',gsd:'5cm/px',aMin:25,aMax:30,aDef:27,hrMW:1.0,mwBat:0.4},full:{label:'IEC Full',sub:'Warranty / Insurance',gsd:'3cm/px',aMin:15,aMax:20,aDef:18,hrMW:1.5,mwBat:0.3}};
+var BSEC={commercial:{label:'COMMERCIAL',c:'#F07800',f:{sMin:8,sMax:15,sDef:10,ovF:0.70,ovS:0.60,cam:'tele'},r:{aMin:15,aMax:25,aDef:20,ovF:0.75,ovS:0.70}},heritage:{label:'HERITAGE',c:'#1A6FA8',f:{sMin:3,sMax:10,sDef:5,ovF:0.80,ovS:0.65,cam:'wide'},r:{aMin:15,aMax:25,aDef:18,ovF:0.80,ovS:0.65}}};
+var CFOV={wide:{h:84,v:57},tele:{h:35,v:24},thermal:{h:61,v:49}};
+
+function fSz(fov,d){return 2*d*Math.tan(fov*Math.PI/180/2);}
+function pPos(tot,vf,d,ov){var st=fSz(vf,d)*(1-ov),a=[],h=0;while(h<=tot+st*0.5){a.push(+h.toFixed(1));h+=st;}return a;}
+function hxa(hex,a){var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return 'rgba('+r+','+g+','+b+','+a+')';}
+
+// ─── Canvas helpers ─────────────────────────────────────────────────────────
+function gc(id){var c=document.getElementById(id);return c?c.getContext('2d'):null;}
+function dLine(ctx,x1,y1,x2,y2,col,lw,dash){ctx.save();ctx.strokeStyle=col;ctx.lineWidth=lw||1;ctx.setLineDash(dash||[]);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.restore();}
+function dRect(ctx,x,y,w,h,fill,stroke,lw){ctx.save();if(fill){ctx.fillStyle=fill;ctx.fillRect(x,y,w,h);}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||1;ctx.strokeRect(x,y,w,h);}ctx.restore();}
+function dTxt(ctx,t,x,y,col,sz,align,base){ctx.save();ctx.fillStyle=col||'#E2E8F0';ctx.font=(sz||9)+'px monospace';ctx.textAlign=align||'left';ctx.textBaseline=base||'middle';ctx.fillText(t,x,y);ctx.restore();}
+function dCirc(ctx,x,y,r,fill){ctx.save();ctx.fillStyle=fill;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.restore();}
+function mkCv(id,w,h){return '<canvas id="'+id+'" width="'+w+'" height="'+h+'"></canvas>';}
+
+// ─── UI helpers ──────────────────────────────────────────────────────────────
+function afpSec(sec){
+  S.sec=sec;
+  document.querySelectorAll('.afp-sec').forEach(function(b){
+    var a=b.dataset.sec===sec;
+    b.classList.toggle('afp-active',a);
+    b.style.background=a?SECS[sec].c:'#1A1A1A';
+  });
+  document.getElementById('afp-nav').style.borderBottomColor=SECS[sec].c;
+  document.getElementById('afp-dot').style.background=SECS[sec].c;
+  document.getElementById('afp-sname').style.color=SECS[sec].c;
+  document.getElementById('afp-sname').textContent=SECS[sec].label;
+  document.getElementById('afp-facc').style.color=SECS[sec].c;
+  afpRender();
+}
+window.afpSec=afpSec;
+
+function afpRender(){
+  var s=S.sec;
+  if(s==='tower')rTower();
+  if(s==='building')rBuilding();
+  if(s==='solar')rSolar();
+  if(s==='infra')rInfra();
+}
+window.afpRender=afpRender;
+
+function afpSet(ns,key,val){S[ns][key]=val;afpRender();}
+window.afpSet=afpSet;
+
+function sld(lbl,key,ns,min,max,step,unit,c,dec){
+  var v=S[ns][key];
+  return '<div class="afp-sld"><div class="afp-sld-hdr"><span class="afp-sld-k">'+lbl+'</span><span class="afp-sld-v" style="color:'+c+'">'+parseFloat(v).toFixed(dec||0)+(unit||'m')+'</span></div>'
+    +'<input type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+v+'" style="accent-color:'+c+'" oninput="afpSet(\''+ns+'\',\''+key+'\',+this.value)"></div>';
+}
+function lbl(t,c){return '<div class="afp-lbl" style="color:'+c+'">'+t+'</div>';}
+function kv(k,v,hi,warn,c){var col=warn?'#E53935':hi?(c||'#F07800'):'#E2E8F0';return '<div class="afp-kv"><span class="afp-kk">'+k+'</span><span style="color:'+col+';font-weight:'+(hi||warn?700:400)+'">'+v+'</span></div>';}
+function flag(c,title,body){return '<div class="afp-flag" style="background:'+hxa(c,0.1)+';border:1px solid '+hxa(c,0.4)+';color:'+c+'"><b>'+title+'</b><span>'+body+'</span></div>';}
+function tog(key,ns,opts,c){
+  return '<div class="afp-brow">'+opts.map(function(o){
+    var v=o[0],l=o[1],col=o[2]||c,a=String(S[ns][key])===String(v);
+    return '<button class="afp-tog" style="'+(a?'background:'+col+';color:#fff;border-bottom-color:'+col:'')+'" onclick="afpSet(\''+ns+'\',\''+key+'\','+(isNaN(v)?'\''+v+'\'':v)+')">'+l+'</button>';
+  }).join('')+'</div>';
+}
+function vtabs(tabs,ns){
+  var ac=SECS[S.sec].c;
+  return '<div class="afp-vtabs">'+tabs.map(function(t){
+    var a=S[ns].view===t[0];
+    return '<button class="afp-vtab" style="'+(a?'background:'+ac+';color:#fff;border-bottom-color:'+ac:'')+'" onclick="afpSet(\''+ns+'\',\'view\',\''+t[0]+'\')">'+t[1]+'</button>';
+  }).join('')+'</div>';
+}
+function schTbl(cols,rows,ac){
+  var h=cols.map(function(c){return '<th style="color:'+ac+'">'+c+'</th>';}).join('');
+  var b=rows.map(function(r,i){
+    return '<tr class="'+(i%2===0?'afp-odd':'afp-even')+'">'+r.map(function(c,j){
+      return '<td style="'+(j===0?'color:'+ac+';font-weight:700':j===r.length-1?'color:#555;font-size:8px':'')+'">'+(c||'')+'</td>';
+    }).join('')+'</tr>';
+  }).join('');
+  return '<div class="afp-sch"><table><thead><tr>'+h+'</tr></thead><tbody>'+b+'</tbody></table></div>';
+}
+
+// ═══ TOWER ═════════════════════════════════════════════════════════════════
+function rTower(){
+  var t=S.tower,ac='#F07800';
+  var rfP=[{label:'Safe',dist:20,c:'#4CAF50'},{label:'Caution',dist:15,c:'#F07800'},{label:'Min',dist:10,c:'#E53935'}];
+  var camD={rgb:{vFOV:55,hFOV:73,c:'#F07800'},thermal:{vFOV:41,hFOV:55,c:'#1A6FA8'}};
+  var cam=camD[t.cam],rf=rfP[t.rf];
+  var fH=fSz(cam.vFOV,rf.dist),spacing=fH*0.2;
+  var passes=pPos(t.h,cam.vFOV,rf.dist,0.8);
+  var zones=[{l:'Base',c:'#5A5A5A',f:0,to:0.08},{l:'Cabinet/BTS',c:'#1A6FA8',f:0.08,to:0.22},{l:'Antenna',c:'#F07800',f:0.65,to:0.88},{l:'Obs.Light',c:'#E53935',f:0.92,to:1.0}];
+
+  document.getElementById('afp-ctrl').innerHTML=
+    lbl('TOWER HEIGHT',ac)+sld('HEIGHT','h','tower',10,120,1,'m',ac)+
+    lbl('CAMERA',ac)+tog('cam','tower',[['rgb','RGB 48MP','#F07800'],['thermal','Thermal IR','#1A6FA8']],ac)+
+    lbl('RF DISTANCE',ac)+
+    '<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px">'+
+    rfP.map(function(p,i){return '<button style="padding:8px 10px;text-align:left;font-family:monospace;font-size:9px;background:'+(t.rf===i?'#222':'#1A1A1A')+';border:1px solid '+(t.rf===i?p.c:'#2A2A2A')+';color:'+(t.rf===i?p.c:'#555')+';" onclick="afpSet(\'tower\',\'rf\','+i+')"><b>'+p.label+' — '+p.dist+'m</b><br><span style="color:#444;font-size:8px">'+['Non-active','Active-reduced','Active-full RF'][i]+'</span></button>';}).join('')+
+    '</div>'+
+    '<div class="afp-panel" style="border-color:'+ac+'">'+lbl('SUMMARY',ac)+kv('Passes',passes.length,true,false,ac)+kv('Spacing',spacing.toFixed(2)+'m')+kv('Frame H',fH.toFixed(1)+'m')+kv('Rotations',passes.length,true,false,ac)+'</div>'+
+    '<div>'+zones.map(function(z){return '<div style="display:flex;align-items:center;gap:6px;font-size:9px;margin-bottom:3px"><div style="width:10px;height:10px;background:'+z.c+'"></div><span style="color:#777">'+z.l+'</span></div>';}).join('')+'</div>';
+
+  var content=vtabs([['diagram','DIAGRAM'],['schedule','SCHEDULE']],'tower');
+  if(t.view==='diagram'){
+    content+=mkCv('afp-tc',300,460);
+    document.getElementById('afp-content').innerHTML=content;
+    var ctx=gc('afp-tc');if(!ctx)return;
+    var SW=300,SH=460,TX=140,TW=22,DT=18,DB=SH-25,DH=DB-DT;
+    var yH=function(h){return DB-(h/t.h)*DH;};
+    ctx.fillStyle='#141414';ctx.fillRect(0,0,SW,SH);
+    [0,10,20,30,40,50,60,70,80,90,100,110,120].filter(function(h){return h<=t.h;}).forEach(function(h){
+      dLine(ctx,38,yH(h),SW-8,yH(h),'#1E1E1E',1);dTxt(ctx,h+'m',34,yH(h),'#444',7,'right','middle');
+    });
+    zones.forEach(function(z){var yt=yH(t.h*z.to),yb=yH(t.h*z.f);ctx.fillStyle=hxa(z.c,0.1);ctx.fillRect(TX-55,yt,55,yb-yt);dTxt(ctx,z.l.split('/')[0],TX-57,yH(t.h*((z.f+z.to)/2)),z.c,7,'right','middle');});
+    ctx.fillStyle='#252525';ctx.strokeStyle='#404040';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(TX-TW/2-5,DB);ctx.lineTo(TX+TW/2+5,DB);ctx.lineTo(TX+TW/2,DT+18);ctx.lineTo(TX-TW/2,DT+18);ctx.closePath();ctx.fill();ctx.stroke();
+    dRect(ctx,TX-5,DT,10,22,'#2E2E2E','#404040',1);
+    [0.68,0.75,0.82].forEach(function(p){var y=yH(t.h*p);ctx.fillStyle=hxa('#F07800',0.7);ctx.fillRect(TX+TW/2+2,y-4,12,8);ctx.fillRect(TX-TW/2-14,y-4,12,8);});
+    dCirc(ctx,TX,yH(t.h*0.97),4,hxa('#E53935',0.9));
+    passes.forEach(function(h,i){var y=yH(h);dLine(ctx,TX+TW/2+16,y,SW-6,y,cam.c,1,[3,2]);dLine(ctx,TX+TW/2+16,y-2,TX+TW/2+16,y+2,cam.c,1.5);if(passes.length<=20||i%2===0)dTxt(ctx,h.toFixed(1)+'m',SW-4,y,cam.c,7,'right','middle');});
+  } else {
+    content+=schTbl(['PASS','HEIGHT','ZONE','ROTATION'],passes.map(function(h,i){var z=zones.slice().reverse().find(function(z){return h>=t.h*z.f;})||zones[0];return ['P'+(i+1),h.toFixed(1)+'m',z.l,'360°'];}),ac);
+    document.getElementById('afp-content').innerHTML=content;
+  }
+}
+
+// ═══ BUILDING ══════════════════════════════════════════════════════════════
+function rBuilding(){
+  var b=S.building,cfg=BSEC[b.sub],sc=cfg.c;
+  var fc=CFOV[cfg.f.cam];
+  var fH=fSz(fc.v,b.so),fW=fSz(fc.h,b.so);
+  var fPasses=pPos(b.bH,fc.v,b.so,cfg.f.ovF);
+  var colStep=fW*(1-cfg.f.ovS),cPasses=[],cx=0;while(cx<=b.bL+colStep*0.5){cPasses.push(+cx.toFixed(1));cx+=colStep;}
+  var rFH=fSz(CFOV.wide.v,b.alt),rFW=fSz(CFOV.wide.h,b.alt);
+  var roofLines=Math.ceil(b.bW/(rFW*(1-cfg.r.ovS)))+1;
+  var roofImg=Math.ceil(b.bL/(rFH*(1-cfg.r.ovF)))+1;
+  var totFac=(b.pat==='horizontal'?fPasses.length:cPasses.length)*4;
+
+  document.getElementById('afp-ctrl').innerHTML=
+    '<div class="afp-sub">'+Object.keys(BSEC).map(function(k){var v=BSEC[k],a=b.sub===k;return '<button class="afp-tog" style="'+(a?'background:'+v.c+';color:#fff;border-bottom-color:'+v.c:'')+'" onclick="S.building.sub=\''+k+'\';S.building.so='+v.f.sDef+';S.building.alt='+v.r.aDef+';afpRender()">'+v.label+'</button>';}).join('')+'</div>'+
+    lbl('GEOMETRY',sc)+sld('HEIGHT','bH','building',4,60,1,'m',sc)+sld('LENGTH','bL','building',10,200,1,'m',sc)+sld('WIDTH','bW','building',10,150,1,'m',sc)+
+    lbl('FACADE',sc)+'<div class="afp-note">'+(cfg.f.cam==='tele'?'ARC-2B · Med Tele · 70%/60%':'HEAG317 · 80%/65% · min 3m')+'</div>'+
+    sld('STANDOFF','so','building',cfg.f.sMin,cfg.f.sMax,1,'m',sc)+
+    tog('pat','building',[['horizontal','HORIZ'],['vertical','VERT']],sc)+
+    lbl('ROOF',sc)+sld('ALT ABOVE ROOF','alt','building',cfg.r.aMin,cfg.r.aMax,1,'m',sc)+
+    (b.sub==='heritage'?flag('#1A6FA8','HEAG317 ACTIVE','Min 3m standoff · 80% fwd · Method Statement may be required'):'')+
+    '<div class="afp-panel" style="border-color:'+sc+'">'+lbl('SUMMARY',sc)+kv('Facade/face',b.pat==='horizontal'?fPasses.length:cPasses.length)+kv('×4 total',totFac,true,false,sc)+kv('Roof lines',roofLines)+kv('~Roof images',roofLines*roofImg,true,false,sc)+'</div>';
+
+  var content=vtabs([['facade','FACADE'],['roof','ROOF'],['schedule','SCHEDULE']],'building');
+  if(b.view==='facade'){
+    content+=mkCv('afp-bc',290,380);
+    document.getElementById('afp-content').innerHTML=content;
+    var ctx=gc('afp-bc');if(!ctx)return;
+    var SW=290,SH=380,PL=38,PR=55,PT=16,PB=24,dW=SW-PL-PR,dH=SH-PT-PB;
+    var yH=function(h){return PT+dH-(h/b.bH)*dH;};
+    ctx.fillStyle='#141414';ctx.fillRect(0,0,SW,SH);
+    for(var h=0;h<=b.bH;h+=5){dLine(ctx,PL,yH(h),SW-PR+8,yH(h),'#1C1C1C',1);dTxt(ctx,h+'m',PL-3,yH(h),'#444',7,'right','middle');}
+    dRect(ctx,PL,PT,dW,dH,'#202020','#404040',1.5);
+    [0.1,0.38,0.66].forEach(function(p){dRect(ctx,PL+dW*p,yH(b.bH*0.55),dW*0.2,dH*0.12,'#1A1A1A','#303030',1);});
+    if(b.pat==='horizontal'){
+      fPasses.forEach(function(h,i){var y=yH(h);dLine(ctx,SW-PR+2,y,SW-PR+10,y,sc,1.5);dLine(ctx,PL,y,SW-PR+2,y,sc,0.8,[3,2]);if(fPasses.length<=18||i%2===0)dTxt(ctx,'P'+(i+1)+'·'+h.toFixed(1)+'m',SW-PR+13,y,sc,7,'left','middle');});
+    } else {
+      cPasses.forEach(function(wx,i){var xPx=PL+(wx/b.bL)*dW;dLine(ctx,xPx,PT,xPx,PT+dH,sc,0.8,[3,2]);dTxt(ctx,'C'+(i+1),xPx,PT-6,sc,7,'center','middle');});
+    }
+  } else if(b.view==='roof'){
+    content+=mkCv('afp-brc',290,210);
+    document.getElementById('afp-content').innerHTML=content;
+    var ctx2=gc('afp-brc');if(!ctx2)return;
+    var RW=290,RH=210,RP=28,rdW=RW-RP*2,rdH=RH-RP*2;
+    ctx2.fillStyle='#141414';ctx2.fillRect(0,0,RW,RH);
+    dRect(ctx2,RP,RP,rdW,rdH,'#202020','#404040',1.5);
+    var stepS2=rFW*(1-cfg.r.ovS),s2=0;
+    while(s2<=b.bW+stepS2*0.5){var yPx=RP+Math.min(s2/b.bW,1)*rdH,hB=(rFW/b.bW)*rdH/2;ctx2.fillStyle=hxa(sc,0.08);ctx2.fillRect(RP,yPx-hB,rdW,hB*2);dLine(ctx2,RP,yPx,RP+rdW,yPx,sc,0.7,[4,3]);s2+=stepS2;}
+    dTxt(ctx2,b.bL+'m',RP+rdW/2,RP-8,'#555',8,'center','middle');
+    ctx2.save();ctx2.translate(RP-10,RP+rdH/2);ctx2.rotate(-Math.PI/2);dTxt(ctx2,b.bW+'m',0,0,'#555',8,'center','middle');ctx2.restore();
+    dTxt(ctx2,roofLines+' lines · '+roofImg+' img/line',RP+rdW/2,RP+rdH+14,sc,9,'center','middle');
+  } else {
+    var rows=[['ARC-1','Overview orbit',(b.bH+25)+'m','Wide RGB','−45° · 4K video']];
+    fPasses.forEach(function(h,i){['N','S','E','W'].forEach(function(f){rows.push(['ARC-2B','P'+(i+1)+'·'+f,h.toFixed(1)+'m',cfg.f.cam==='tele'?'Med Tele':'Wide RGB',b.so+'m standoff']);});});
+    rows.push(['ARC-2A','Roof grid',(b.bH+b.alt)+'m','Wide RGB','Nadir −90° · '+(cfg.r.ovF*100).toFixed(0)+'% fwd']);
+    content+=schTbl(['PHASE','PASS','ALT','CAMERA','NOTE'],rows,sc);
+    document.getElementById('afp-content').innerHTML=content;
+  }
+}
+
+// ═══ SOLAR ═════════════════════════════════════════════════════════════════
+function rSolar(){
+  var sol=S.solar,lv=IEC[sol.iec],sc=sol.iec==='full'?'#E53935':'#E8A000';
+  var mwCap=sol.mode==='mw'?sol.mw:sol.ha/2,areHa=sol.mode==='ha'?sol.ha:sol.mw*2;
+  var side=Math.sqrt(areHa*10000);
+  var fH2=fSz(CFOV.thermal.v,sol.alt),fW2=fSz(CFOV.thermal.h,sol.alt);
+  var stepS=fW2*0.3,gLines=Math.ceil(side/stepS)+1,imgPL=Math.ceil(side/(fH2*0.2))+1;
+  var ftH=mwCap*lv.hrMW,days=Math.ceil(ftH/3.5),bats=Math.ceil(mwCap/lv.mwBat)+1,sectors=Math.ceil(mwCap/lv.mwBat);
+  var irrOk=sol.irr>=600,windOk=sol.wind<=5;
+
+  document.getElementById('afp-ctrl').innerHTML=
+    tog('mode','solar',[['mw','MW'],['ha','HA']],sc)+
+    (sol.mode==='mw'?sld('MW CAPACITY','mw','solar',0.5,50,0.1,' MW',sc,1):sld('AREA (HA)','ha','solar',1,100,0.5,' ha',sc,1))+
+    '<div style="color:#444;font-size:8px;margin-bottom:8px">≈'+areHa.toFixed(1)+' ha · ≈'+mwCap.toFixed(1)+' MW</div>'+
+    lbl('IEC LEVEL',sc)+
+    Object.keys(IEC).map(function(k){var v=IEC[k],a=sol.iec===k;return '<button style="width:100%;padding:7px 10px;cursor:pointer;text-align:left;font-family:monospace;font-size:9px;margin-bottom:4px;background:'+(a?'#222':'#1A1A1A')+';border:1px solid '+(a?sc:'#2A2A2A')+';color:'+(a?sc:'#555')+'" onclick="S.solar.iec=\''+k+'\';S.solar.alt='+v.aDef+';afpRender()"><b>'+v.label+'</b> — '+v.gsd+'<br><span style="color:#444;font-size:8px">'+v.sub+'</span></button>';}).join('')+
+    sld('ALTITUDE','alt','solar',lv.aMin,lv.aMax,1,'m',sc)+
+    lbl(irrOk&&windOk?'IEC CONDITIONS ✔':'IEC CONDITIONS ✘',irrOk&&windOk?'#4CAF50':'#E53935')+
+    sld('IRRADIANCE','irr','solar',400,1000,10,' W/m²',irrOk?'#4CAF50':'#E53935',0)+
+    sld('WIND','wind','solar',0,10,0.5,' m/s',windOk?'#4CAF50':'#E53935',1)+
+    (!irrOk?flag('#E53935','600 W/m² NOT MET','Non-negotiable. Pause. Do not reduce. Reschedule.'):'')+
+    tog('bif','solar',[['false','MONOFACIAL'],['true','BIFACIAL','#1A6FA8']],sc)+
+    (sol.bif?flag('#1A6FA8','BIFACIAL — FRONT FACE ONLY','Rear-face not detectable. Note methodology. Albedo effect on delta T.'):'')+
+    '<div class="afp-panel" style="border-color:'+sc+'">'+lbl('SUMMARY',sc)+kv('Site',mwCap.toFixed(1)+'MW · '+areHa.toFixed(1)+'ha')+kv('Grid lines',gLines,true,false,sc)+kv('Est. images','~'+(gLines*imgPL))+kv('Flight time','~'+ftH.toFixed(1)+' hrs')+kv('Batteries',bats,true,false,sc)+kv('Sectors',sectors)+(days>1?kv('Deployment',days+' days — ACCOM',false,true):())+'</div>';
+
+  var content=vtabs([['site','SITE GRID'],['schedule','SCHEDULE']],'solar');
+  if(sol.view==='site'){
+    content+=mkCv('afp-sc',300,300);
+    document.getElementById('afp-content').innerHTML=content;
+    var ctx=gc('afp-sc');if(!ctx)return;
+    var SW=300,SH=300,RP=28,rdW=SW-RP*2,rdH=SH-RP*2;
+    ctx.fillStyle='#141414';ctx.fillRect(0,0,SW,SH);
+    dRect(ctx,RP,RP,rdW,rdH,'#181818','#404040',1.5);
+    for(var i=0;i<10;i++){ctx.fillStyle='#222';ctx.fillRect(RP+rdW*0.04,RP+rdH*(0.07+i*0.085),rdW*0.92,rdH*0.04);}
+    var s3=0,si=0;
+    while(s3<=side+stepS*0.5){var xPx=RP+Math.min(s3/side,1)*rdW,hB=(fW2/side)*rdW/2;ctx.fillStyle=hxa(sc,si%2===0?0.08:0.03);ctx.fillRect(xPx-hB,RP,hB*2,rdH);dLine(ctx,xPx,RP,xPx,RP+rdH,sc,0.7,[3,3]);s3+=stepS;si++;}
+    for(var j=1;j<sectors;j++){var xPx2=RP+(j/sectors)*rdW;dLine(ctx,xPx2,RP,xPx2,RP+rdH,'#F07800',1.5,[5,3]);dTxt(ctx,'S'+j,xPx2+3,RP+10,'#F07800',8,'left','top');}
+    dTxt(ctx,'▣ INV',RP+rdW*0.15,RP+rdH*0.87,'#3A7A3A',8,'left','middle');
+    dTxt(ctx,'▣ INV',RP+rdW*0.65,RP+rdH*0.87,'#3A7A3A',8,'left','middle');
+    ctx.save();ctx.globalAlpha=0.12;dTxt(ctx,mwCap.toFixed(1)+'MW',RP+rdW/2,RP+rdH/2,sc,22,'center','middle');ctx.restore();
+    dTxt(ctx,gLines+' lines · '+sol.alt+'m AGL · 80%/70%',RP+rdW/2,RP+rdH+14,sc,9,'center','top');
+  } else {
+    var rows2=[['ARC-5 PRE','Conditions · tracker lock','Ground','—','Confirm ≥600 W/m²'],['ARC-1','Site overview · row alignment','Wide RGB','60–80m','Nadir+orbit · 4K video']];
+    for(var k=0;k<sectors;k++)rows2.push(['ARC-2 S'+String(k+1).padStart(2,'0'),'Thermal+RGB · lawnmower','Thermal R-JPEG + Wide RGB',sol.alt+'m','Review S'+(k+1)+' before S'+(k+2)]);
+    rows2.push(['ARC-4','Anomaly close-up · paired','Thermal + Med Tele','10–20m','5s dwell · spot meter · GPS tag'],['ARC-5 POST','Backup · site secured','Ground','—','R-JPEG confirmed · flight log exported']);
+    content+=schTbl(['PHASE','ACTION','CAMERA','ALT','NOTE'],rows2,sc);
+    document.getElementById('afp-content').innerHTML=content;
+  }
+}
+
+// ═══ INFRA ═════════════════════════════════════════════════════════════════
+function rInfra(){
+  var inf=S.infra,sc=inf.sub==='bridge'?'#F07800':'#1A6FA8';
+  var sCols=(function(){var fw=fSz(CFOV.tele.h,inf.so),st=fw*0.3;return st>0?Math.ceil(inf.spanL/st)+1:0;})();
+  var bPass=[{n:'Deck Pass',f:'Deck',cam:'Med Tele+Thermal',g:'−45° to −90°',alt:(inf.deckH+inf.deckT+inf.so)+'m',note:'Cracking, joints, drainage'},{n:'Soffit Pass',f:'Soffit',cam:'Med Tele+Thermal',g:'+25° to +35°',alt:(inf.deckH-inf.so)+'m',note:sCols+' cols · spalling, rebar'}];
+  for(var pi=0;pi<inf.piers;pi++)bPass.push({n:'Pier '+(pi+1),f:'Pier',cam:'Med Tele+Thermal',g:'0° to −20°',alt:'All faces',note:'Cracking, scour'});
+  bPass.push({n:'Abutment N',f:'Abutment',cam:'Med Tele+Thermal',g:'−15° to 0°',alt:inf.so+'m',note:'Bearings, wingwalls'},{n:'Abutment S',f:'Abutment',cam:'Med Tele+Thermal',g:'−15° to 0°',alt:inf.so+'m',note:'Bearings, wingwalls'},{n:'Joints',f:'Joint',cam:'Telephoto',g:'0°',alt:'Hover',note:'Seal, debris'},{n:'Bearings',f:'Bearing',cam:'Telephoto+Thermal',g:'0°',alt:'Hover',note:'Settlement, corrosion'});
+  var wPass=[{n:'Top Pass',h:(inf.wH*0.9).toFixed(1),g:'−45°',note:'Top, coping, drainage'},{n:'Mid Pass',h:(inf.wH*0.5).toFixed(1),g:'0°–10°',note:'Face, cracking, weepholes'},{n:'Base Pass',h:(inf.wH*0.05).toFixed(1),g:'0°',note:'Toe, weepholes, settlement'}];
+
+  document.getElementById('afp-ctrl').innerHTML=
+    '<div class="afp-sub">'+
+    '<button class="afp-tog" style="'+(inf.sub==='bridge'?'background:#F07800;color:#fff;border-bottom-color:#F07800':'')+'" onclick="afpSet(\'infra\',\'sub\',\'bridge\')">BRIDGE</button>'+
+    '<button class="afp-tog" style="'+(inf.sub==='wall'?'background:#1A6FA8;color:#fff;border-bottom-color:#1A6FA8':'')+'" onclick="afpSet(\'infra\',\'sub\',\'wall\')">WALL</button>'+
+    '</div>'+
+    (inf.sub==='bridge'?
+      lbl('BRIDGE GEOMETRY',sc)+sld('SPAN','spanL','infra',5,200,1,'m',sc)+sld('DECK HEIGHT','deckH','infra',2,50,1,'m',sc)+sld('DECK THICKNESS','deckT','infra',0.5,3,0.1,'m',sc,1)+sld('PIERS','piers','infra',0,8,1,'',sc)+sld('STANDOFF','so','infra',3,8,1,'m',sc)+
+      lbl('SITE FLAGS',sc)+
+      [['TM Plan','tm','#E53935'],['Water','water','#1A6FA8'],['Steel/VPS','steel','#F07800']].map(function(x){var l=x[0],k=x[1],col=x[2];return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="color:#888;font-size:9px">'+l+'</span><button style="padding:5px 12px;font-family:monospace;font-size:9px;font-weight:700;background:'+(inf[k]?col:'#252525')+';color:'+(inf[k]?'#fff':'#555')+';border-bottom:2px solid '+(inf[k]?col:'#333')+'" onclick="S.infra.'+k+'=!S.infra.'+k+';afpRender()">'+(inf[k]?'YES':'NO')+'</button></div>';}).join('')+
+      (inf.tm?flag('#E53935','TM REQUIRED','Confirm active before flight near live carriageway.'):'')+
+      (inf.water?flag('#1A6FA8','WATER CROSSING','No flight over deep water.'):'')+
+      (inf.steel?flag('#F07800','STEEL — VPS','GPS unreliable. VPS primary.'):'')+
+      '<div class="afp-panel" style="border-color:'+sc+'">'+lbl('SUMMARY',sc)+kv('Span',inf.spanL+'m')+kv('Deck',inf.deckH+'m')+kv('Piers',inf.piers)+kv('Soffit cols',sCols)+kv('Total passes',bPass.length,true,false,sc)+kv('Batteries',Math.max(2,Math.ceil((bPass.length+2)/4))+'+',true,false,sc)+kv('Scour check','Pier base',false,true)+'</div>'
+    :
+      lbl('WALL GEOMETRY',sc)+sld('HEIGHT','wH','infra',1,20,1,'m',sc)+sld('LENGTH','wL','infra',5,200,1,'m',sc)+sld('STANDOFF','wS','infra',3,6,1,'m',sc)+
+      flag(sc,'THERMAL TIMING','During/after rainfall — maximum moisture contrast.')+flag('#444','WEEPHOLES','All outlets individually. Blocked = hydrostatic risk.')+
+      '<div class="afp-panel" style="border-color:'+sc+'">'+lbl('SUMMARY',sc)+kv('Wall',inf.wH+'m H × '+inf.wL+'m L')+kv('Passes','3 (Top/Mid/Base)',true,false,sc)+kv('Standoff',inf.wS+'m')+kv('Watch for','Lean/rotation',false,true)+'</div>'
+    );
+
+  var content=vtabs([['diagram','DIAGRAM'],['schedule','SCHEDULE'],['defects','DEFECTS']],'infra');
+  if(inf.view==='diagram'){
+    if(inf.sub==='bridge'){
+      content+=mkCv('afp-ic',320,320);
+      document.getElementById('afp-content').innerHTML=content;
+      var ctx=gc('afp-ic');if(!ctx)return;
+      var SW=320,SH=320,PL=40,PR=20,PT=26,PB=48,dW=SW-PL-PR,dH=SH-PT-PB;
+      var totH=inf.deckH+inf.deckT+8;
+      var yH=function(h){return PT+dH-(h/totH)*dH;},xF=function(x){return PL+(x/inf.spanL)*dW;};
+      ctx.fillStyle='#141414';ctx.fillRect(0,0,SW,SH);
+      [0,5,10,15,20].filter(function(h){return h<=totH+1;}).forEach(function(h){dLine(ctx,PL-2,yH(h),SW-PR,yH(h),'#1C1C1C',1);dTxt(ctx,h+'m',PL-4,yH(h),'#444',7,'right','middle');});
+      ctx.fillStyle=hxa('#0A1520',0.6);ctx.fillRect(PL,yH(0),dW,PB-8);
+      dTxt(ctx,'WATERWAY',PL+dW/2,yH(0)+14,hxa('#1A5A8A',1),7,'center','top');
+      var pierXs=[];for(var pi2=0;pi2<inf.piers;pi2++)pierXs.push(inf.spanL*(pi2+1)/(inf.piers+1));
+      pierXs.forEach(function(px){dRect(ctx,xF(px)-8,yH(inf.deckH),16,yH(0)-yH(inf.deckH),'#2E2E2E','#404040',1);});
+      dRect(ctx,PL,yH(inf.deckH),14,yH(0)-yH(inf.deckH),'#2E2E2E','#404040',1);
+      dRect(ctx,xF(inf.spanL)-14,yH(inf.deckH),14,yH(0)-yH(inf.deckH),'#2E2E2E','#404040',1);
+      dRect(ctx,PL,yH(inf.deckH+inf.deckT),dW,yH(inf.deckH)-yH(inf.deckH+inf.deckT),'#282828','#505050',1.5);
+      dTxt(ctx,'DECK',PL+dW/2,yH(inf.deckH+inf.deckT)+(yH(inf.deckH)-yH(inf.deckH+inf.deckT))/2,'#555',7,'center','middle');
+      var dY=inf.deckH+inf.deckT+inf.so,sY=inf.deckH-inf.so;
+      dLine(ctx,PL,yH(dY),xF(inf.spanL),yH(dY),'#F07800',1.5,[4,2]);dTxt(ctx,'DECK',xF(inf.spanL)+3,yH(dY),'#F07800',7,'left','middle');
+      dLine(ctx,PL,yH(sY),xF(inf.spanL),yH(sY),'#1A6FA8',1.5,[4,2]);dTxt(ctx,'SOFFIT',xF(inf.spanL)+3,yH(sY),'#1A6FA8',7,'left','middle');
+      dTxt(ctx,'SPAN: '+inf.spanL+'m',PL+dW/2,SH-8,'#555',8,'center','middle');
+    } else {
+      content+=mkCv('afp-ic',300,320);
+      document.getElementById('afp-content').innerHTML=content;
+      var ctx2=gc('afp-ic');if(!ctx2)return;
+      var SW2=300,SH2=320,PL2=40,PR2=18,PT2=18,PB2=26,dW2=SW2-PL2-PR2,dH2=SH2-PT2-PB2;
+      var yW=function(h){return PT2+dH2-(h/inf.wH)*dH2;};
+      ctx2.fillStyle='#141414';ctx2.fillRect(0,0,SW2,SH2);
+      for(var wh=0;wh<=inf.wH;wh+=2){dLine(ctx2,PL2,yW(wh),SW2-PR2,yW(wh),'#1C1C1C',1);dTxt(ctx2,wh+'m',PL2-4,yW(wh),'#444',7,'right','middle');}
+      ctx2.fillStyle=hxa('#1A1A00',0.35);ctx2.fillRect(PL2-18,PT2,18,dH2);
+      dRect(ctx2,PL2,PT2,dW2*0.15,dH2,'#282828','#505050',1.5);
+      [0.15,0.3,0.45,0.6,0.75,0.9].forEach(function(p){dCirc(ctx2,PL2+dW2*0.15,yW(inf.wH*(1-p)),3,hxa('#1A6FA8',0.7));});
+      [{n:'TOP',h:inf.wH*0.9,g:'−45°'},{n:'MID',h:inf.wH*0.5,g:'0°–10°'},{n:'BASE',h:inf.wH*0.05,g:'0°'}].forEach(function(p){
+        var y=yW(p.h),xEnd=PL2+dW2*0.15+inf.wS*10;
+        dLine(ctx2,PL2+dW2*0.15,y,xEnd,y,sc,1.2,[4,2]);dTxt(ctx2,p.n+'·'+p.h.toFixed(1)+'m',xEnd+4,y-3,sc,8,'left','bottom');dTxt(ctx2,p.g,xEnd+4,y+5,'#444',7,'left','top');
+      });
+    }
+  } else if(inf.view==='schedule'){
+    var passes=inf.sub==='bridge'?bPass:wPass;
+    var sRows=[['ARC-1','Overview','Full','Wide RGB',inf.sub==='bridge'?(inf.deckH+inf.deckT+20)+'m':(inf.wH+10)+'m','−45°','Full asset · 4K video']];
+    passes.forEach(function(p,i){sRows.push(['ARC-'+(i<2?'2':'3'),p.n,p.f||'',p.cam,p.alt||'',p.g||'',p.note]);});
+    sRows.push(['ARC-4','Defects','All','Telephoto+Thermal','3–10m','Per defect','5s dwell · paired · GPS']);
+    content+=schTbl(['PHASE','PASS','FACE','CAMERA','ALT','GIMBAL','TARGETS'],sRows,sc);
+    document.getElementById('afp-content').innerHTML=content;
+  } else {
+    var defRows=inf.sub==='bridge'?[
+      ['Scour at pier base','<span class="afp-crit">CRITICAL</span>','Immediate notification — same day'],
+      ['Spalling / exposed rebar','<span class="afp-crit">CRITICAL</span>','Falling concrete — notify immediately'],
+      ['Delamination','<span class="afp-high">HIGH</span>','Post solar-loading thermal · paired RGB'],
+      ['Moisture ingress','<span class="afp-high">HIGH</span>','Thermal plume · document extent'],
+      ['Bearing deterioration','<span class="afp-high">HIGH</span>','Structural concern · GPS tag'],
+      ['Expansion joint failure','<span class="afp-med">MEDIUM</span>','Water ingress risk'],
+      ['Cracking','<span class="afp-high">HIGH</span>','Width+pattern · scale reference'],
+    ]:[
+      ['Settlement / lean','<span class="afp-crit">CRITICAL</span>','Immediate notification'],
+      ['Face cracking','<span class="afp-high">HIGH</span>','Horizontal = overloading — engineer req.'],
+      ['Blocked weepholes','<span class="afp-high">HIGH</span>','Hydrostatic risk — document all individually'],
+      ['Moisture saturation','<span class="afp-med">MEDIUM</span>','Thermal · drainage failure'],
+      ['Root damage','<span class="afp-med">MEDIUM</span>','Full coverage documented'],
+    ];
+    content+='<div class="afp-sch"><table><thead><tr>'+['DEFECT','CLASS','ACTION'].map(function(h){return '<th style="color:'+sc+'">'+h+'</th>';}).join('')+'</tr></thead><tbody>'+defRows.map(function(r,i){return '<tr class="'+(i%2===0?'afp-odd':'afp-even')+'"><td style="font-weight:700">'+r[0]+'</td><td>'+r[1]+'</td><td style="color:#555;font-size:8px">'+r[2]+'</td></tr>';}).join('')+'</tbody></table></div>';
+    content+='<div class="afp-flag" style="background:'+hxa('#E53935',0.08)+';border:1px solid '+hxa('#E53935',0.4)+';color:#E53935;margin-top:10px"><b>THERMAL DELAMINATION</b><span>Min 2–3°C delta T. Optimal: 2+ hrs direct sun or 1–2 hrs post-sunset.</span></div>';
+    document.getElementById('afp-content').innerHTML=content;
+  }
+}
+
+// ─── Init ───────────────────────────────────────────────────────────────────
+afpSec('tower');
+})();
+</script>
